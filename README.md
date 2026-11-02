@@ -1,4 +1,4 @@
-# Another-ICS-scripts
+# Another ICS scripts
 
 [![Portability CI on main](https://github.com/z4y-d3n/Another-ICS-scripts/actions/workflows/portability.yml/badge.svg?branch=main)](https://github.com/z4y-d3n/Another-ICS-scripts/actions/workflows/portability.yml)
 [![CPython CI-tested versions: 3.12, 3.13, 3.14](https://img.shields.io/badge/CPython%20CI--tested-3.12%20%7C%203.13%20%7C%203.14-3776AB)](#testing-and-evidence)
@@ -6,8 +6,7 @@
 Another set of ICS scripts, intentionally simple: nine independent, self-contained,
 monolithic Python master clients for exploring, interacting with and testing
 industrial protocols in explicitly authorized environments. Each file is its own
-CLI application; download the script you need and run it directly. This is a
-collection of scripts, not an installable framework or OT-ArchGuard.
+CLI application; download the script you need and run it directly.
 
 | Script | Protocol |
 | --- | --- |
