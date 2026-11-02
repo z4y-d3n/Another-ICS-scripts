@@ -1,0 +1,9 @@
+# Production clients retain their exact historical bytes on every platform.
+*.py -text
+# New support code and text have a consistent checkout representation.
+tests/*.py text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.txt text eol=lf
+.gitattributes text eol=lf
+.gitignore text eol=lf

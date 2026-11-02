@@ -1,0 +1,7 @@
+# Only direct protocol dependency; tests otherwise use Python's standard library.
+# Baseline metadata: https://pypi.org/project/asyncua/2.0.1/
+# Requires Python >=3.10; universal wheel. OS/Python installation is verified by CI,
+# including 3.14 (not explicitly classified by this release's package metadata).
+# Transitives, including cryptography and pyOpenSSL, resolve from package metadata:
+# this direct pin is NOT a complete transitive lockfile. Missing/import failures block CI.
+asyncua==2.0.1

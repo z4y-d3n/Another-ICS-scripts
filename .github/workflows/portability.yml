@@ -1,0 +1,80 @@
+name: Portability — offline smoke & regression
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  offline:
+    name: ${{ matrix.os }} / CPython ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ['3.12', '3.13', '3.14']
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      PYTHONUTF8: '1'
+      OTICS_OFFLINE_TESTS: '1'
+    steps:
+      # Released major versions verified in the official action READMEs:
+      # https://github.com/actions/checkout and https://github.com/actions/setup-python
+      - name: Checkout without persisted credentials
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Set up CPython
+        uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install mandatory OPC UA dependency (setup may use network)
+        id: dependencies
+        shell: python
+        run: |
+          import subprocess
+          import sys
+          subprocess.run([sys.executable, '-m', 'pip', 'install', '--disable-pip-version-check',
+                          '--requirement', 'requirements-ci.txt'], check=True)
+          subprocess.run([sys.executable, '-m', 'pip', 'check'], check=True)
+      - name: Environment and mandatory asyncua import
+        id: environment
+        run: python -B tests/ci_support.py --environment
+      - name: Immutable source bytes and in-memory syntax compilation
+        id: sources
+        run: python -B tests/check_sources.py
+      - name: Offline regression and nine guarded help menus (120 second limit)
+        id: tests
+        run: python -B tests/ci_support.py --run-tests
+      - name: Record actual job outcome
+        if: always()
+        shell: python
+        env:
+          JOB_OUTCOME: ${{ job.status }}
+          DEPENDENCIES_OUTCOME: ${{ steps.dependencies.outcome }}
+          ENVIRONMENT_OUTCOME: ${{ steps.environment.outcome }}
+          SOURCES_OUTCOME: ${{ steps.sources.outcome }}
+          TESTS_OUTCOME: ${{ steps.tests.outcome }}
+        run: |
+          import os
+          from pathlib import Path
+          lines = ['Portability job: ' + os.environ['JOB_OUTCOME']]
+          for key in ('DEPENDENCIES', 'ENVIRONMENT', 'SOURCES', 'TESTS'):
+              lines.append(key + ': ' + (os.environ[key + '_OUTCOME'] or 'not run'))
+          lines.append('Tests are offline Python guards/fakes; no equipment or native DCP traffic.')
+          summary = '\n\n'.join(lines) + '\n'
+          print(summary)
+          with Path(os.environ['GITHUB_STEP_SUMMARY']).open('a', encoding='utf-8') as stream:
+              stream.write(summary)
