@@ -97,4 +97,12 @@ Native PROFINET DCP raw Ethernet requires Linux `AF_PACKET` and appropriate
 socket privileges. Fake DCP tests on Windows/macOS do not prove native Ethernet
 support there; PNIO-RPC is a separate UDP path.
 
-No license is currently supplied; public visibility alone grants no unrestricted reuse.
+## License
+
+This project is licensed under the **PolyForm Noncommercial License 1.0.0**.
+
+You may use, study, modify, and redistribute these scripts for noncommercial purposes, subject to the license terms.
+
+Commercial use requires separate authorization from the copyright holder.
+
+See [LICENSE](LICENSE) for the complete terms.
