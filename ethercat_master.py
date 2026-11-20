@@ -1310,14 +1310,18 @@ class _StoreOnce(argparse.Action):
 
 
 def _make_parser() -> _ArgumentParser:
+    # CPython 3.14's formatter needs its own color option because it probes
+    # stdout during construction, before argparse applies the parser setting.
+    color_options = {"color": False} if sys.version_info >= (3, 14) else {}
+
     def formatter(prog: str) -> argparse.HelpFormatter:
         # Preserve terminal wrapping when the original stdout can be queried.
         try:
             if not getattr(getattr(sys, "__stdout__", None), "closed", False):
-                return argparse.RawDescriptionHelpFormatter(prog)
+                return argparse.RawDescriptionHelpFormatter(prog, **color_options)
         except (OSError, ValueError):
             pass
-        return argparse.RawDescriptionHelpFormatter(prog, width=78)
+        return argparse.RawDescriptionHelpFormatter(prog, width=78, **color_options)
 
     parser = _ArgumentParser(
         prog="ethercat_master.py", allow_abbrev=False, formatter_class=formatter,
@@ -1335,6 +1339,7 @@ def _make_parser() -> _ArgumentParser:
             "isolated single-ESC bench and existing packet socket permissions.\n"
             "Diagnose validates --interface and --confirm-bench before checking availability."
         ),
+        **color_options,
     )
     parser.add_argument("-c", "--command", action=_StoreOnce, choices=tuple(Mode), help="Select a mode.")
     parser.add_argument("--hex", dest="frame_hex", action=_StoreOnce, help="Inspect continuous ASCII hex, without FCS.")

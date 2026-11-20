@@ -1,108 +1,88 @@
-# Another ICS scripts
+# Another-ICS-scripts
 
 [![Portability CI on main](https://github.com/z4y-d3n/Another-ICS-scripts/actions/workflows/portability.yml/badge.svg?branch=main)](https://github.com/z4y-d3n/Another-ICS-scripts/actions/workflows/portability.yml)
-[![CPython CI targets 3.12, 3.13 and 3.14](https://img.shields.io/badge/CPython%20CI%20targets-3.12%20%7C%203.13%20%7C%203.14-3776AB)](#testing-and-evidence)
+[![CPython CI targets 3.12, 3.13 and 3.14](https://img.shields.io/badge/CPython%20CI%20targets-3.12%20%7C%203.13%20%7C%203.14-3776AB)](#testing-and-quality-assurance)
 
-Another set of ICS scripts with ten independent, standalone Python clients for
-exploring and testing industrial protocols in explicitly authorized environments.
-Each file provides its own CLI and can run directly. EtherCAT provides offline
-frame inspection and deterministic simulation.
+## Introduction
 
-| Script | Protocol |
-| --- | --- |
-| `modbus_master.py` | Modbus TCP |
-| `s7comm_master.py` | S7comm / ISO-on-TCP |
-| `enip_master.py` | EtherNet/IP / CIP |
-| `profinet_master.py` | PROFINET DCP and PNIO DCE/RPC |
-| `iec104_master.py` | IEC 60870-5-104 |
-| `bacnet_master.py` | BACnet/IP |
-| `opcua_master.py` | OPC UA |
-| `mqtt_spb_master.py` | MQTT / Sparkplug B (implemented subset) |
-| `dnp3_master.py` | DNP3/TCP (implemented subset) |
-| `ethercat_master.py` | EtherCAT Type 1 (offline inspection and simulation) |
+Another-ICS-scripts is a collection of ten standalone Python clients for
+exploring and testing industrial protocols in controlled, authorized environments.
+Each client runs directly from its own script and provides a command-line interface.
 
-## Quick start
+## Supported Protocols
 
-The offline CI matrix targets **CPython 3.12, 3.13 and 3.14** on Ubuntu, Windows
-and macOS. Run each script directly with Python.
+| Protocol | Script | Scope |
+| --- | --- | --- |
+| Modbus TCP | [`modbus_master.py`](modbus_master.py) | Coil and register access, polling, and device identification. |
+| S7comm | [`s7comm_master.py`](s7comm_master.py) | PLC memory access, diagnostics, and block inventory over ISO-on-TCP. |
+| EtherNet/IP | [`enip_master.py`](enip_master.py) | Device identification, explicit CIP attribute access, and tag reads and writes. |
+| PROFINET | [`profinet_master.py`](profinet_master.py) | DCP discovery and configuration, plus PNIO DCE/RPC record reads and diagnostics. |
+| IEC 60870-5-104 | [`iec104_master.py`](iec104_master.py) | Station interrogation, point reads, monitoring, and control commands. |
+| BACnet/IP | [`bacnet_master.py`](bacnet_master.py) | Device discovery, object enumeration, and property reads, writes, and monitoring. |
+| OPC UA | [`opcua_master.py`](opcua_master.py) | Endpoint discovery, node browsing, data access, subscriptions, and method calls. |
+| MQTT / Sparkplug B | [`mqtt_spb_master.py`](mqtt_spb_master.py) | MQTT 3.1.1 publishing and subscribing, with support for a subset of Sparkplug B metrics. |
+| DNP3/TCP | [`dnp3_master.py`](dnp3_master.py) | A subset covering link status, integrity polls, point reads, and selected controls. |
+| EtherCAT | [`ethercat_master.py`](ethercat_master.py) | Offline inspection of Type 1 frames and deterministic simulation. |
+
+## Quick Start
+
+From the repository root, run the chosen script with Python. Use `--help` or `-h`
+to see its supported commands, required arguments, and options.
 
 ```sh
-python modbus_master.py -h
-python profinet_master.py -h
+python modbus_master.py --help
+python profinet_master.py --help
 ```
 
-**Every script has its own `-h` / `--help` menu** for supported commands, required
-arguments, types, options and inline examples. Command sets and preconditions
-differ, so consult the individual menu. Where supported, **`-H` / `--host` selects
-a target**. OPC UA also accepts `-U` / `--url`. PROFINET DCP uses an interface.
+Target arguments vary by command. Where supported, use `-H` or `--host` for a
+network host. OPC UA also accepts `-U` or `--url` for an endpoint. PROFINET DCP
+uses a network interface.
 
-Nine clients, including EtherCAT, use only Python's standard library.
-**OPC UA alone requires `asyncua==2.0.1`** and its
-third-party transitive dependencies, including `cryptography`. Install it before
-requesting OPC UA help:
+## Requirements and Dependencies
+
+The CI targets are CPython **3.12, 3.13, and 3.14**. Nine clients use only the
+Python standard library. OPC UA requires `asyncua`, including for `--help`.
+Install the CI-pinned version, which also installs dependencies such as
+`cryptography` for certificate handling.
 
 ```sh
 python -m pip install asyncua==2.0.1
-python opcua_master.py -h
 ```
 
-[requirements-ci.txt](requirements-ci.txt) pins the same direct dependency for
-the full CI suite; it is not a complete transitive lockfile.
+[`requirements-ci.txt`](requirements-ci.txt) pins the same version. Pip resolves
+the transitive dependencies at installation time.
 
-## EtherCAT offline usage
+## Platform Compatibility
 
-```sh
-python ethercat_master.py --help
-python ethercat_master.py -c capabilities
-python ethercat_master.py -c inspect --hex ffffffffffff02000000000188a40e100427341200010200000000000000
-python ethercat_master.py -c simulate --scenario success
-python ethercat_master.py -c simulate --scenario timeout
-```
+Offline checks target Ubuntu, Windows, and macOS. Networked operations primarily
+use TCP or UDP, with platform-specific requirements for raw Ethernet.
 
-| Mode | Supported behavior |
-| --- | --- |
-| `inspect` | Reads local ASCII hex for untagged Ethernet II EtherCAT Type 1 frames without FCS. Accepts stripped (default) or retained padding and up to 1,514 bytes and 15 datagrams per frame. |
-| `simulate` | Uses synthetic FPRD fixtures, an in-memory transport and deterministic logical timing. The timeout is 0.001–10 seconds (default 1), with up to 64 events per exchange. |
-| `capabilities` | Reports the local runtime, input profile, limits, Linux packet API symbols and public diagnostic status. |
+- **PROFINET.** Native DCP uses raw Ethernet and requires Linux `AF_PACKET` and
+  permission to open raw sockets. PNIO DCE/RPC uses UDP and does not require
+  `AF_PACKET`.
+- **EtherCAT.** The internal native backend uses Linux `AF_PACKET` raw sockets.
+  Physical diagnostics in the public CLI remain disabled pending hardware
+  interoperability validation.
 
-All three modes run offline. Results identify offline input, synthetic fixtures
-or the local runtime as their source. The CLI has a combined 16 KiB UTF-8 output
-budget. Help lists the exit codes, including `0` for success, `4` for local
-failures and `6` for the simulated timeout above.
+## Testing and Quality Assurance
 
-The internal backend is implemented for Linux `AF_PACKET` / `SOCK_RAW` and has
-offline test evidence from substituted system dependencies. Public `diagnose`
-is disabled pending physical interoperability validation. Real-time master
-operation and cyclic process control are outside this client's scope.
+The [GitHub Actions workflow](.github/workflows/portability.yml) is configured
+for nine combinations, pairing each of the three operating systems with each
+of the three CPython versions listed above. It verifies the SHA-256 hashes of
+all ten clients against [`SOURCE_SHA256.md`](SOURCE_SHA256.md), checks UTF-8
+encoding, and compiles the sources in memory.
 
-## Testing and evidence
+The [portability suite](tests/test_portability.py) exercises the CLI help menus,
+selected protocol encoders and parsers, reply handling, and socket recovery. It
+also verifies the installed OPC UA dependency. Additional unit, integration,
+and robustness suites cover EtherCAT. The suites use fixed fixtures, test
+doubles such as fake sockets, and cooperative Python guards. Dependency
+installation may access package indexes.
 
-The [portability workflow](.github/workflows/portability.yml) is configured for
-nine OS/Python combinations. In the historical
-[2026-11-02 run](https://github.com/z4y-d3n/Another-ICS-scripts/actions/runs/41457800317)
-at commit [`c581dd7`](https://github.com/z4y-d3n/Another-ICS-scripts/commit/c581dd7ec7b91277d86cd922a37c5ef9ce62a41d),
-**all nine jobs passed 86 offline tests each: 774 executions of 86 test cases**.
-That run covered the original nine clients. The EtherCAT suites have local
-Windows evidence on CPython 3.12, 3.13 and 3.14. Check the workflow run for the
-commit in question for remote results, including Ubuntu and macOS.
-
-The [selective regression suite](tests/test_portability.py) checks source hashes,
-UTF-8 and in-memory syntax compilation; real CLI help entry points under guards;
-fixed binary encoding/parsing fixtures; protocol state and malformed inputs;
-selected socket cleanup/recovery paths; and mandatory `asyncua` import/version
-checks. Selected fixtures distinguish correlated replies, rejection and
-indeterminate outcomes; none establishes operational authorization.
-[SOURCE_SHA256.md](SOURCE_SHA256.md) records the byte identity of all ten clients.
-
-Historical development also included bounded regression, fuzz-style decoder and
-fixture tests, adversarial/malformed-frame scenarios and follow-up corrections,
-including BACnet/PROFINET socket-initialization cleanup. These are historical
-engineering evidence; the smaller published CI suite does not rerun those entire
-campaigns or provide an independent hardware audit.
-
-To run the repository checks locally, install the CI dependency first, then:
+Run the permanent checks from the repository root.
 
 ```sh
+python -m pip install -r requirements-ci.txt
 python -B tests/check_sources.py
 python -B tests/ci_support.py --run-tests
 python -B -m unittest discover -s tests/ethercat_unit -p "test_*.py" -v
@@ -110,26 +90,20 @@ python -B -m unittest discover -s tests/ethercat_integration -p "test_*.py" -v
 python -B tests/ethercat_robustness/run_suite.py
 ```
 
-The EtherCAT suites cover unit contracts, integration with guarded local
-processes and permanent robustness regressions. The extended input and
-test-sensitivity campaigns under `tests/ethercat_robustness/` run on demand.
+Use the workflow run for the revision you are evaluating to confirm its CI
+results. The tests exercise selected behavior without contacting industrial
+equipment or sending native Ethernet traffic. They do not establish
+interoperability with physical devices, plant networks, or independent protocol
+stacks. The cooperative Python guards are intended for test isolation and do not constitute a security sandbox.
 
-CI setup may contact package indexes. The protocol tests themselves use controlled
-fixtures and fake sockets, without contacting ICS equipment; their cooperative
-Python guards are **not a security sandbox**.
+## Scope and Safety
 
-## Scope and safety
+Use networked clients only in controlled environments you own or are explicitly
+authorized to test. Even reads send traffic to their targets. Writes, control
+commands, and configuration changes can alter device or process state.
 
-These checks validate no real industrial devices, plant networks or independent
-third-party protocol stacks. They provide no formal protocol-conformance
-certification or guarantee of defect-free behavior. The original nine scripts
-provide active master-client operations. Even reads contact devices, and some
-operations alter or control industrial state. Use them only in owned or
-explicitly authorized controlled environments.
-
-Native PROFINET DCP raw Ethernet requires Linux `AF_PACKET` and appropriate
-socket privileges. Fake DCP tests on Windows/macOS do not prove native Ethernet
-support there; PNIO-RPC is a separate UDP path.
+The project carries no formal protocol-conformance certification. Real-time
+EtherCAT master operation and cyclic process control are outside its scope.
 
 ## License
 

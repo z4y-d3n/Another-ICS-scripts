@@ -2,6 +2,7 @@ import ast
 from contextlib import redirect_stderr, redirect_stdout
 import io
 import logging
+import os
 import runpy
 import signal
 import sys
@@ -40,6 +41,51 @@ class CommandLineTests(OfflineCase):
         help_output = io.StringIO()
         ec._make_parser().print_help(help_output)
         self.assertIn("Examples", help_output.getvalue())
+
+    def test_parser_construction_does_not_probe_effective_stdout(self):
+        mocked = Mock(spec_set=io.StringIO)
+        closed = io.StringIO()
+        closed.close()
+        detached = io.TextIOWrapper(io.BytesIO(), encoding="utf-8")
+        color_env = {"PYTHON_COLORS": "", "NO_COLOR": "", "FORCE_COLOR": "", "TERM": "xterm"}
+        # Exercise the Unix color-detection path on Windows too.
+        with detached.detach(), patch.dict(os.environ, color_env), patch.object(sys, "platform", "linux"):
+            for name, stdout in (("mocked", mocked), ("closed", closed), ("absent", None), ("detached", detached)):
+                with self.subTest(stream=name), redirect_stdout(stdout):
+                    self.assertIn("usage: ethercat_master.py", ec._make_parser().format_help())
+                    self.assertIs(sys.stdout, stdout)
+        mocked.fileno.assert_not_called()
+        mocked.isatty.assert_not_called()
+
+    def test_help_and_usage_stay_plain_when_the_host_forces_color(self):
+        closed = io.StringIO()
+        closed.close()
+        with io.StringIO() as original, patch.dict(os.environ, {"PYTHON_COLORS": "1"}):
+            for stdout in (original, closed):
+                with self.subTest(original_closed=stdout.closed), patch.object(sys, "__stdout__", stdout):
+                    parser = ec._make_parser()
+                    formatter = parser.formatter_class(prog=parser.prog)
+                    formatter.add_usage(None, [], [])
+                    self.assertEqual(formatter.format_help(), "usage: ethercat_master.py\n")
+                    code, out, err = self.invoke(["--help"])
+                    self.assertEqual((code, err.getvalue()), (0, ""))
+                    self.assertIn("usage: ethercat_master.py", out.getvalue())
+                    self.assertNotIn("\x1b", out.getvalue())
+                    code, out, err = self.invoke([])
+                    self.assertEqual((code, out.getvalue()), (2, ""))
+                    self.assertIn("usage: ethercat_master.py", err.getvalue())
+                    self.assertNotIn("\x1b", err.getvalue())
+                    self.assertEqual(os.environ["PYTHON_COLORS"], "1")
+                    self.assertIs(sys.__stdout__, stdout)
+
+    def test_unexpected_formatter_type_error_is_not_swallowed(self):
+        parser = ec._make_parser()
+        failure = TypeError("formatter failed internally")
+        argparse = Mock(wraps=ec.argparse)
+        argparse.RawDescriptionHelpFormatter.side_effect = failure
+        with patch.object(ec, "argparse", argparse), self.assertRaises(TypeError) as raised:
+            parser.format_help()
+        self.assertIs(raised.exception, failure)
 
     def test_bad_arguments_are_rejected_with_usage_without_entering_operational_modes(self):
         cases = (
