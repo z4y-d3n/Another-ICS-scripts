@@ -49,15 +49,27 @@ jobs:
           subprocess.run([sys.executable, '-m', 'pip', 'install', '--disable-pip-version-check',
                           '--requirement', 'requirements-ci.txt'], check=True)
           subprocess.run([sys.executable, '-m', 'pip', 'check'], check=True)
-      - name: Environment and mandatory asyncua import
+      - name: Environment information and mandatory asyncua import
         id: environment
         run: python -B tests/ci_support.py --environment
-      - name: Immutable source bytes and in-memory syntax compilation
+      - name: Source integrity verification and in-memory compilation
         id: sources
         run: python -B tests/check_sources.py
-      - name: Offline regression and nine guarded help menus (120 second limit)
+      - name: Historical portability tests and guarded help menus
         id: tests
         run: python -B tests/ci_support.py --run-tests
+      - name: EtherCAT unit tests
+        id: ethercat_unit
+        timeout-minutes: 2
+        run: python -B -m unittest discover -s tests/ethercat_unit -p "test_*.py" -v
+      - name: EtherCAT integration tests
+        id: ethercat_integration
+        timeout-minutes: 6
+        run: python -B -m unittest discover -s tests/ethercat_integration -p "test_*.py" -v
+      - name: EtherCAT permanent robustness tests
+        id: ethercat_r1
+        timeout-minutes: 3
+        run: python -B tests/ethercat_robustness/run_suite.py
       - name: Record actual job outcome
         if: always()
         shell: python
@@ -67,13 +79,17 @@ jobs:
           ENVIRONMENT_OUTCOME: ${{ steps.environment.outcome }}
           SOURCES_OUTCOME: ${{ steps.sources.outcome }}
           TESTS_OUTCOME: ${{ steps.tests.outcome }}
+          ETHERCAT_UNIT_OUTCOME: ${{ steps.ethercat_unit.outcome }}
+          ETHERCAT_INTEGRATION_OUTCOME: ${{ steps.ethercat_integration.outcome }}
+          ETHERCAT_R1_OUTCOME: ${{ steps.ethercat_r1.outcome }}
         run: |
           import os
           from pathlib import Path
           lines = ['Portability job: ' + os.environ['JOB_OUTCOME']]
-          for key in ('DEPENDENCIES', 'ENVIRONMENT', 'SOURCES', 'TESTS'):
+          for key in ('DEPENDENCIES', 'ENVIRONMENT', 'SOURCES', 'TESTS',
+                      'ETHERCAT_UNIT', 'ETHERCAT_INTEGRATION', 'ETHERCAT_R1'):
               lines.append(key + ': ' + (os.environ[key + '_OUTCOME'] or 'not run'))
-          lines.append('Tests are offline Python guards/fakes; no equipment or native DCP traffic.')
+          lines.append('Tests use offline Python guards and fakes without equipment or native Ethernet traffic.')
           summary = '\n\n'.join(lines) + '\n'
           print(summary)
           with Path(os.environ['GITHUB_STEP_SUMMARY']).open('a', encoding='utf-8') as stream:

@@ -3,10 +3,10 @@
 Fixtures below are hand-built from reviewed wire layouts. Encoders are checked
 against fixed bytes; decoders consume independent literals, never their encoder's
 output. All product code executes inside a default-deny guard. The only children
-are nine bounded real -h probes. No server, listener, broker, UA session or PKI.
+are bounded real -h probes. No server, listener, broker, UA session or PKI.
 """
 
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 import hashlib
 import importlib.metadata
 import io
@@ -55,7 +55,7 @@ class IntegrityAndGuardTests(unittest.TestCase):
         output = io.StringIO()
         with OfflineGuard(), redirect_stdout(output):
             check_root(ROOT)
-        self.assertEqual(output.getvalue().count("UTF8/AST/compile PASS"), 9)
+        self.assertEqual(output.getvalue().count("UTF8/AST/compile PASS"), len(SOURCES))
 
     def test_changed_in_memory_source_is_rejected(self):
         records = parse_manifest((ROOT / "SOURCE_SHA256.md").read_text(encoding="utf-8"))
@@ -134,9 +134,14 @@ class IntegrityAndGuardTests(unittest.TestCase):
         self.assertIs(sys.stdout, old_stdout)
         self.assertIs(sys.modules.get(alias), old_module)
 
+    def test_ethercat_import_is_silent_under_guard(self):
+        stdout, stderr = io.StringIO(), io.StringIO()
+        with redirect_stdout(stdout), redirect_stderr(stderr), client_module("ethercat_master.py") as module:
+            self.assertTrue(callable(module.main))
+        self.assertEqual((stdout.getvalue(), stderr.getvalue()), ("", ""))
 
 class CLIHelpTests(unittest.TestCase):
-    """Nine isolated children; no target/credentials and at most eight seconds each."""
+    """One isolated child per source, without credentials or a target, for up to eight seconds."""
 
 
 def _help_test(name):

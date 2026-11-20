@@ -13,6 +13,7 @@ SOURCES = (
     "modbus_master.py", "s7comm_master.py", "enip_master.py",
     "profinet_master.py", "iec104_master.py", "bacnet_master.py",
     "opcua_master.py", "mqtt_spb_master.py", "dnp3_master.py",
+    "ethercat_master.py",
 )
 ROW = re.compile(r"\| `([a-z0-9_]+\.py)` \| ([0-9a-f]{64}) \| ([1-9][0-9]*) \| (CRLF|LF) \|")
 
@@ -84,7 +85,7 @@ def main():
     except (OSError, UnicodeError, SyntaxError, ValueError) as exc:
         print(f"SOURCE CHECK FAILED: {exc}", file=sys.stderr)
         return 1
-    print("SOURCE CHECK PASS: nine immutable snapshots; no files written")
+    print(f"SOURCE CHECK PASS: {len(SOURCES)} immutable snapshots; no files written")
     return 0
 
 

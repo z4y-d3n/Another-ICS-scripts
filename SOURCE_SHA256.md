@@ -1,12 +1,13 @@
 # Source byte provenance
 
-These are the accepted post-Phase-3 and post-socket-cleanup handoff snapshots.
+These are the accepted source snapshots for the ten standalone clients.
 SHA-256 proves byte identity, not correctness, conformance, interoperability or
 field readiness. Intentional source edits require a reviewed table update and
 matching verification in the same change; never regenerate expectations to hide
 an unexplained mismatch.
 
-Machine-readable format: exactly nine rows, in the table below, with a backtick
+All ten sources use strict UTF-8 without a BOM.
+The machine-readable table has one row per source with a backtick
 filename, lowercase 64-digit SHA-256, decimal byte count and `CRLF` or `LF` label.
 `tests/check_sources.py` validates this format and compares raw bytes independently.
 
@@ -21,6 +22,7 @@ filename, lowercase 64-digit SHA-256, decimal byte count and `CRLF` or `LF` labe
 | `opcua_master.py` | d867838264e96417aee7bfc1a2b98999dd8d8b987460d480ffd8a13d25a2a617 | 60341 | CRLF |
 | `mqtt_spb_master.py` | fe3ef34b2954dedfb183d07f9b8404fd585db22e6a45a3669412fb257aed82a8 | 48601 | CRLF |
 | `dnp3_master.py` | 95131397ef854024d3424c8f892b8ee2f1d6b12edb54b2a147639220090a64db | 38554 | CRLF |
+| `ethercat_master.py` | 8d20c6e6b522493cdf19f0c50c05c9232f2dcb98661967983753069bed834b78 | 65392 | LF |
 
 Run `python -B tests/check_sources.py` from the repository root. To calculate one
 raw digest independently on any supported OS:

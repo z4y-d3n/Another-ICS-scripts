@@ -34,10 +34,15 @@ def probe(name):
             else:
                 raise RuntimeError("Client help did not take argparse's exit route")
         text = output.getvalue()
-        # Eight clients deliberately use usage=argparse.SUPPRESS. Their real
-        # top-level menu supplies a title, options and per-command examples.
-        if not all(flag in text for flag in ("-h", "--help", "-H", "--host", "--command")):
-            raise RuntimeError("Missing real help/host/command menu")
+        required = ("-h", "--help", "--command")
+        if name == "ethercat_master.py":
+            if guard.import_events:
+                raise RuntimeError(f"Unexpected EtherCAT help effects: {guard.import_events}")
+            required += ("inspect", "simulate", "capabilities", "diagnose")
+        else:
+            required += ("-H", "--host")
+        if not all(token in text for token in required):
+            raise RuntimeError("Missing expected CLI options or modes")
         if len(text) < 200 or not any(label in text.lower() for label in ("options:", "usage:")):
             raise RuntimeError("Help did not provide a useful argparse menu")
     print(f"CLI_HELP_PASS {name} flag=-h exit=0 forbidden=0 chars={len(text)} "
